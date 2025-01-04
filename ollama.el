@@ -57,7 +57,7 @@
 (define-derived-mode ollama-list-mode tabulated-list-mode "Ollama Models"
   "Major mode for listing Ollama models."
   (setq tabulated-list-format
-        [("Name" 30 t)
+        [("Name" 70 t)
          ("Size" 15 ollama--sort-size)
          ("Modified" 20 ollama--sort-modified)
          ("Format" 10 t)
