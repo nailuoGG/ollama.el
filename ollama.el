@@ -41,9 +41,16 @@
 
 (defvar ollama-list-mode-map
   (let ((map (make-sparse-keymap)))
+    ;; Normal mode bindings
     (define-key map (kbd "d") 'ollama-delete-model-at-point)
     (define-key map (kbd "s") 'ollama-sort-models)
     (define-key map (kbd "g") 'ollama-list-models)
+    ;; Evil mode bindings
+    (with-eval-after-load 'evil
+      (evil-define-key 'normal ollama-list-mode-map
+        "d" 'ollama-delete-model-at-point
+        "s" 'ollama-sort-models
+        "g" 'ollama-list-models))
     map)
   "Keymap for `ollama-list-mode'.")
 
@@ -56,7 +63,14 @@
          ("Format" 10 t)
          ("Params" 10 t)])
   (setq tabulated-list-sort-key (cons "Name" nil))
-  (tabulated-list-init-header))
+  (tabulated-list-init-header)
+  ;; Make buffer read-only
+  (setq buffer-read-only t)
+  ;; Allow certain commands in read-only buffers
+  (setq-local evil-read-only-exempt-commands
+              '(ollama-delete-model-at-point
+                ollama-sort-models
+                ollama-list-models)))
 
 (defun ollama--format-size (size)
   "Format SIZE in human readable format."
@@ -103,7 +117,16 @@
 (defun ollama-sort-models ()
   "Sort models by current column."
   (interactive)
-  (tabulated-list-revert))
+  (let* ((column (tabulated-list--get-sort-column))
+         (sort-fn (aref (tabulated-list-format) column 2)))
+    (if sort-fn
+        (progn
+          (setq tabulated-list-entries
+                (sort tabulated-list-entries
+                      (lambda (a b)
+                        (funcall sort-fn (car a) (car b)))))
+          (tabulated-list-print t))
+      (message "This column is not sortable"))))
 
 ;;;###autoload
 (defun ollama-list-models ()
