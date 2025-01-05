@@ -4,6 +4,16 @@
 
 ollama.el provides an Emacs interface to manage Ollama models, allowing you to list, pull, delete, copy, and inspect models directly from Emacs.
 
+* Why This Exists
+
+You know how we all love playing with local LLMs?
+
+We're constantly pulling models from Ollama, Hugging Face, and everywhere else.
+
+Wouldn't it be awesome to have a neat way to organize all those models right in Emacs?
+
+That's what this is all about!
+
 * Installation
 
 For Doom Emacs users, add this to your =config.el=:
@@ -15,9 +25,15 @@ For Doom Emacs users, add this to your =config.el=:
 #+end_src
 
 Then run:
-```bash
+
+#+begin_src bash
 doom sync
-```
+#+end_src
+
+
+* Usage
+
+
 
 * Available Commands
 
