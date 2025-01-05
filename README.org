@@ -48,6 +48,10 @@ M-x ollama-status
 
 This will show a tabulated list of all available models with their details.
 
+
+[[file:./images/example.png]]
+
+
 ** Keybindings in Status View
 
 When in the status buffer (`*Ollama Status*`), you can use these keybindings:
