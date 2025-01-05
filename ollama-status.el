@@ -86,8 +86,9 @@
 (defvar ollama-status--models nil
   "List of models in the current status view.")
 
-(defun ollama-status-refresh ()
-  "Refresh the Ollama status buffer."
+(defun ollama-status-refresh (&optional callback)
+  "Refresh the Ollama status buffer.
+Optional CALLBACK is called after successful refresh."
   (interactive)
   (ollama--api-request "/api/tags"
                        "GET"
@@ -95,7 +96,12 @@
                        (lambda (data)
                          (let ((models (alist-get 'models data)))
                            (setq ollama-status--models models)
-                           (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode models)))))
+                           (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode models)
+                           (message "Models refreshed successfully")
+                           (when callback
+                             (funcall callback))))
+                       :error (lambda (err)
+                                (message "Failed to refresh models: %s" err))))
 
 ;;;###autoload
 (defun ollama-list-models ()
@@ -129,7 +135,12 @@
   (let ((model-name (ollama-status--get-model-at-point)))
     (when (and model-name (yes-or-no-p (format "Delete model %s? " model-name)))
       (ollama-delete-model model-name)
-      (ollama-status-refresh))))
+      ;; Wait a moment before refresh to ensure deletion completes
+      (run-at-time 1 nil
+                   (lambda ()
+                     (ollama-status-refresh
+                      (lambda ()
+                        (message "Model %s deleted successfully" model-name))))))))
 
 (defun ollama-status-show-menu ()
   "Show context menu for the model at point."

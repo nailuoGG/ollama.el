@@ -25,19 +25,23 @@
   :type 'string
   :group 'ollama-api)
 
-(defun ollama--api-request (endpoint &optional method data callback)
-  "Make a request to Ollama API."
-  (request (concat ollama-api-url endpoint)
-    :type (or method "GET")
-    :headers '(("Content-Type" . "application/json"))
-    :data (when data (json-encode data))
-    :parser 'json-read
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (when callback (funcall callback data))))
-    :error (cl-function
-            (lambda (&key error-thrown &allow-other-keys)
-              (message "Ollama error: %s" error-thrown)))))
+(defun ollama--api-request (endpoint &optional method data callback &rest args)
+  "Make a request to Ollama API.
+Optional ARGS may contain :error keyword for error handling."
+  (let ((error-callback (plist-get args :error)))
+    (request (concat ollama-api-url endpoint)
+      :type (or method "GET")
+      :headers '(("Content-Type" . "application/json"))
+      :data (when data (json-encode data))
+      :parser 'json-read
+      :success (cl-function
+                (lambda (&key data &allow-other-keys)
+                  (when callback (funcall callback data))))
+      :error (cl-function
+              (lambda (&key error-thrown &allow-other-keys)
+                (if error-callback
+                    (funcall error-callback error-thrown)
+                  (message "Ollama error: %s" error-thrown)))))))
 
 (defun ollama--get-local-models ()
   "Get list of locally installed Ollama models."
