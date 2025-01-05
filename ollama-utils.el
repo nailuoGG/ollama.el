@@ -48,15 +48,34 @@
          (params (alist-get 'parameter_size details)))
     (list model (vector name size modified format params))))
 
+;; Define display buffer action for Ollama buffers
+(defcustom ollama-display-buffer-action
+  '((display-buffer-reuse-window
+     display-buffer-in-direction)
+    (direction . right)
+    (window-width . 0.618))
+  "Display action for Ollama buffers."
+  :type 'sexp
+  :group 'ollama)
+
+;; Add to display-buffer-alist for all Ollama buffers
+(add-to-list 'display-buffer-alist
+             `(,(rx bos "*Ollama" (* any) "*")
+               . ,ollama-display-buffer-action))
+
 (defun ollama--setup-model-buffer (buffer-name mode models)
-  "Setup a model buffer with BUFFER-NAME using MODE and MODELS."
+  "Setup a model buffer with BUFFER-NAME using MODE and MODELS.
+This function opens the buffer using the display rules defined in `ollama-display-buffer-action`."
   (with-current-buffer (get-buffer-create buffer-name)
     (funcall mode)
     (setq tabulated-list-entries
           (mapcar #'ollama--prepare-model-entry models))
     (tabulated-list-init-header)
     (tabulated-list-print t)
-    (pop-to-buffer (current-buffer))))
+    ;; Use display-buffer with our custom rules
+    (let ((window (display-buffer (current-buffer))))
+      (select-window window)
+      (fit-window-to-buffer window))))
 
 (provide 'ollama-utils)
 ;;; ollama-utils.el ends here
