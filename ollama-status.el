@@ -48,10 +48,17 @@
 
 (define-derived-mode ollama-status-mode tabulated-list-mode "Ollama Status"
   "Major mode for Ollama status view."
+  (setq tabulated-list-format
+        [("Name" 70 t)
+         ("Size" 15 ollama--sort-size)
+         ("Modified" 20 ollama--sort-modified)
+         ("Format" 10 t)
+         ("Params" 10 t)])
   (setq buffer-read-only t)
   (setq truncate-lines t)
   (setq tabulated-list-padding 2)
   (setq tabulated-list-sort-key (cons "Name" nil))
+  (tabulated-list-init-header)
   (setq-local revert-buffer-function 'ollama-status-refresh)
   (setq-local evil-read-only-exempt-commands
               '(ollama-status-refresh
@@ -71,24 +78,10 @@
    ("Params" 10 t)]
   "Table columns for Ollama status view.")
 
-(defun ollama-status--prepare-entries (models)
-  "Prepare model entries for tabulated list."
-  (mapcar (lambda (model)
-            (let* ((details (alist-get 'details model))
-                   (name (alist-get 'name model))
-                   (size (ollama--format-size (alist-get 'size model)))
-                   (modified (ollama--format-date (alist-get 'modified_at model)))
-                   (format (alist-get 'format details))
-                   (params (alist-get 'parameter_size details)))
-              (list model (vector name size modified format params))))
-          models))
-
 (defun ollama-status--refresh-view ()
   "Refresh the tabulated list view."
   (setq tabulated-list-format ollama-status-columns)
-  (setq tabulated-list-entries (ollama-status--prepare-entries ollama-status--models))
-  (tabulated-list-init-header)
-  (tabulated-list-print t))
+  (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode ollama-status--models))
 
 (defvar ollama-status--models nil
   "List of models in the current status view.")
@@ -102,10 +95,27 @@
                        (lambda (data)
                          (let ((models (alist-get 'models data)))
                            (setq ollama-status--models models)
-                           (with-current-buffer (get-buffer-create ollama-status-buffer-name)
-                             (ollama-status-mode)
-                             (ollama-status--refresh-view)
-                             (pop-to-buffer (current-buffer)))))))
+                           (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode models)))))
+
+;;;###autoload
+(defun ollama-list-models ()
+  "List all available models in a tabulated view."
+  (interactive)
+  (ollama-status-refresh))
+
+(defun ollama-sort-models ()
+  "Sort models by current column."
+  (interactive)
+  (let* ((column (tabulated-list--get-sort-column))
+         (sort-fn (aref (tabulated-list-format) column 2)))
+    (if sort-fn
+        (progn
+          (setq tabulated-list-entries
+                (sort tabulated-list-entries
+                      (lambda (a b)
+                        (funcall sort-fn (car a) (car b)))))
+          (tabulated-list-print t))
+      (message "This column is not sortable"))))
 
 (defun ollama-status--get-model-at-point ()
   "Get the model at point."

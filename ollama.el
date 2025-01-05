@@ -53,63 +53,16 @@
          (params (alist-get 'parameter_size details)))
     (list model (vector name size modified format params))))
 
-(define-derived-mode ollama-list-mode tabulated-list-mode "Ollama Models"
-  "Major mode for listing Ollama models."
-  (setq tabulated-list-format
-        [("Name" 70 t)
-         ("Size" 15 ollama--sort-size)
-         ("Modified" 20 ollama--sort-modified)
-         ("Format" 10 t)
-         ("Params" 10 t)])
-  (setq tabulated-list-sort-key (cons "Name" nil))
-  (tabulated-list-init-header)
-  ;; Make buffer read-only
-  (setq buffer-read-only t)
-  ;; Allow certain commands in read-only buffers
-  (setq-local evil-read-only-exempt-commands
-              '(ollama-delete-model-at-point
-                ollama-sort-models
-                ollama-list-models)))
+(defun ollama--setup-model-buffer (buffer-name mode models)
+  "Setup a model buffer with BUFFER-NAME using MODE and MODELS."
+  (with-current-buffer (get-buffer-create buffer-name)
+    (funcall mode)
+    (setq tabulated-list-entries
+          (mapcar #'ollama--prepare-model-entry models))
+    (tabulated-list-init-header)
+    (tabulated-list-print t)
+    (pop-to-buffer (current-buffer))))
 
-(defun ollama-delete-model-at-point ()
-  "Delete model at point."
-  (interactive)
-  (let* ((entry (tabulated-list-get-entry))
-         (model-name (aref entry 0)))
-    (when (yes-or-no-p (format "Delete model %s? " model-name))
-      (ollama-delete-model model-name)
-      (ollama-list-models))))
-
-(defun ollama-sort-models ()
-  "Sort models by current column."
-  (interactive)
-  (let* ((column (tabulated-list--get-sort-column))
-         (sort-fn (aref (tabulated-list-format) column 2)))
-    (if sort-fn
-        (progn
-          (setq tabulated-list-entries
-                (sort tabulated-list-entries
-                      (lambda (a b)
-                        (funcall sort-fn (car a) (car b)))))
-          (tabulated-list-print t))
-      (message "This column is not sortable"))))
-
-;;;###autoload
-(defun ollama-list-models ()
-  "List all available models in a tabulated view."
-  (interactive)
-  (ollama--api-request "/api/tags"
-                       "GET"
-                       nil
-                       (lambda (data)
-                         (let ((models (alist-get 'models data)))
-                           (with-current-buffer (get-buffer-create "*Ollama Models*")
-                             (ollama-list-mode)
-                             (setq tabulated-list-entries
-                                   (mapcar #'ollama--prepare-model-entry models))
-                             (tabulated-list-init-header)
-                             (tabulated-list-print t)
-                             (pop-to-buffer (current-buffer)))))))
 
 ;;;###autoload
 (defun ollama-pull-model (model-name)
