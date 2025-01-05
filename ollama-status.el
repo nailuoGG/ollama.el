@@ -112,7 +112,9 @@ Optional CALLBACK is called after successful refresh."
 (defun ollama-sort-models ()
   "Sort models by current column."
   (interactive)
-  (let* ((column (tabulated-list--get-sort-column))
+  (let* ((column (or (and (fboundp 'tabulated-list--get-sort-column)
+                          (tabulated-list--get-sort-column))
+                     (car tabulated-list-sort-key)))
          (sort-fn (aref (tabulated-list-format) column 2)))
     (if sort-fn
         (progn
