@@ -16,8 +16,8 @@
 (require 'transient)
 (require 'ollama)
 
-;;;###autoload (autoload 'ollama-dispatch "ollama-transient" nil t)
-(transient-define-prefix ollama-dispatch ()
+;;;###autoload
+(transient-define-prefix ollama-transient-menu ()
   "Ollama model management interface."
   ["Manage Models"
    ("l" "List models" ollama-list-models)
@@ -32,7 +32,7 @@
 (defun ollama-transient-setup ()
   "Setup ollama transient menu."
   (interactive)
-  (ollama-dispatch))
+  (ollama-transient-menu))
 
 (provide 'ollama-transient)
 ;;; ollama-transient.el ends here
