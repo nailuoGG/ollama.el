@@ -4,7 +4,7 @@
 
 ;; Author: jiale.liu <im@liujiale.me>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (request "0.3.0") (json "1.8"))
+;; Package-Requires: ((emacs "27.1") (ollama-api "0.1") (ollama-status "0.1"))
 ;; Keywords: ollama, ai, models
 ;; URL: https://github.com/nailuoGG/ollama.el
 
@@ -13,64 +13,12 @@
 
 ;;; Code:
 
-(require 'request)
-(require 'json)
+(require 'ollama-api)
+(require 'ollama-status)
 
 (defgroup ollama nil
   "Ollama model management."
   :group 'tools)
-
-(defcustom ollama-api-url "http://localhost:11434"
-  "Base URL for Ollama API."
-  :type 'string
-  :group 'ollama)
-
-(defun ollama--api-request (endpoint &optional method data callback)
-  "Make a request to Ollama API."
-  (request (concat ollama-api-url endpoint)
-    :type (or method "GET")
-    :headers '(("Content-Type" . "application/json"))
-    :data (when data (json-encode data))
-    :parser 'json-read
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (when callback (funcall callback data))))
-    :error (cl-function
-            (lambda (&key error-thrown &allow-other-keys)
-              (message "Ollama error: %s" error-thrown)))))
-
-(defvar ollama-list-mode-map
-  (let ((map (make-sparse-keymap)))
-    ;; Normal mode bindings
-    (define-key map (kbd "d") 'ollama-delete-model-at-point)
-    (define-key map (kbd "s") 'ollama-sort-models)
-    (define-key map (kbd "g") 'ollama-list-models)
-    ;; Evil mode bindings
-    (with-eval-after-load 'evil
-      (evil-define-key 'normal ollama-list-mode-map
-        "d" 'ollama-delete-model-at-point
-        "s" 'ollama-sort-models
-        "g" 'ollama-list-models))
-    map)
-  "Keymap for `ollama-list-mode'.")
-
-(define-derived-mode ollama-list-mode tabulated-list-mode "Ollama Models"
-  "Major mode for listing Ollama models."
-  (setq tabulated-list-format
-        [("Name" 70 t)
-         ("Size" 15 ollama--sort-size)
-         ("Modified" 20 ollama--sort-modified)
-         ("Format" 10 t)
-         ("Params" 10 t)])
-  (setq tabulated-list-sort-key (cons "Name" nil))
-  (tabulated-list-init-header)
-  ;; Make buffer read-only
-  (setq buffer-read-only t)
-  ;; Allow certain commands in read-only buffers
-  (setq-local evil-read-only-exempt-commands
-              '(ollama-delete-model-at-point
-                ollama-sort-models
-                ollama-list-models)))
 
 (defun ollama--format-size (size)
   "Format SIZE in human readable format."
@@ -95,23 +43,6 @@
   (time-less-p (date-to-time (alist-get 'modified_at (car b)))
                (date-to-time (alist-get 'modified_at (car a)))))
 
-(defun ollama--get-local-models ()
-  "Get list of locally installed Ollama models."
-  (let ((models nil)
-        (done nil))
-    (ollama--api-request "/api/tags"
-                         "GET"
-                         nil
-                         (lambda (data)
-                           (setq models (mapcar (lambda (model)
-                                                  (alist-get 'name model))
-                                                (cdr (assoc 'models data))))
-                           (setq done t)))
-    ;; Wait for the async request to complete
-    (while (not done)
-      (sit-for 0.1))
-    models))
-
 (defun ollama--prepare-model-entry (model)
   "Prepare MODEL data for tabulated list."
   (let* ((details (alist-get 'details model))
@@ -121,6 +52,24 @@
          (format (alist-get 'format details))
          (params (alist-get 'parameter_size details)))
     (list model (vector name size modified format params))))
+
+(define-derived-mode ollama-list-mode tabulated-list-mode "Ollama Models"
+  "Major mode for listing Ollama models."
+  (setq tabulated-list-format
+        [("Name" 70 t)
+         ("Size" 15 ollama--sort-size)
+         ("Modified" 20 ollama--sort-modified)
+         ("Format" 10 t)
+         ("Params" 10 t)])
+  (setq tabulated-list-sort-key (cons "Name" nil))
+  (tabulated-list-init-header)
+  ;; Make buffer read-only
+  (setq buffer-read-only t)
+  ;; Allow certain commands in read-only buffers
+  (setq-local evil-read-only-exempt-commands
+              '(ollama-delete-model-at-point
+                ollama-sort-models
+                ollama-list-models)))
 
 (defun ollama-delete-model-at-point ()
   "Delete model at point."
