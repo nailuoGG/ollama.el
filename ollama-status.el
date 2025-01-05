@@ -26,17 +26,10 @@
 
 (defvar ollama-status-mode-map
   (let ((map (make-sparse-keymap)))
-    ;; Normal mode bindings
-    (define-key map (kbd "g") 'ollama-status-refresh)
-    (define-key map (kbd "RET") 'ollama-show-model-info)
-    (define-key map (kbd "d") 'ollama-delete-model-at-point)
-    (define-key map (kbd "m") 'ollama-status-show-menu)
-    (define-key map (kbd "q") 'quit-window)
-    (define-key map (kbd "?") 'ollama-status-show-menu)
-    ;; Evil mode bindings
+    ;; Keybindings
     (with-eval-after-load 'evil
       (evil-define-key 'normal ollama-status-mode-map
-        "g" 'ollama-status-refresh
+        "u" 'ollama-status-refresh
         "p" 'ollama-pull-model
         "d" 'ollama-delete-model-at-point
         "c" 'ollama-copy-model
@@ -49,7 +42,7 @@
 (define-derived-mode ollama-status-mode tabulated-list-mode "Ollama Status"
   "Major mode for Ollama status view."
   (setq tabulated-list-format
-        [("Name" 70 t)
+        [("Name" 40 t)
          ("Size" 15 ollama--sort-size)
          ("Modified" 20 ollama--sort-modified)
          ("Format" 10 t)
@@ -70,18 +63,6 @@
   (hl-line-mode 1)
   (use-local-map ollama-status-mode-map))
 
-(defvar ollama-status-columns
-  [("Name" 40 t)
-   ("Size" 15 ollama--sort-size)
-   ("Modified" 20 ollama--sort-modified)
-   ("Format" 10 t)
-   ("Params" 10 t)]
-  "Table columns for Ollama status view.")
-
-(defun ollama-status--refresh-view ()
-  "Refresh the tabulated list view."
-  (setq tabulated-list-format ollama-status-columns)
-  (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode ollama-status--models))
 
 (defvar ollama-status--models nil
   "List of models in the current status view.")
