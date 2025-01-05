@@ -41,7 +41,7 @@
         "d" 'ollama-delete-model-at-point
         "c" 'ollama-copy-model
         "i" 'ollama-show-model-info
-        "s" 'ollama-sort-models
+        "s" 'tabulated-list-sort
         "q" 'quit-window))
     map)
   "Keymap for `ollama-status-mode'.")
@@ -110,20 +110,9 @@ Optional CALLBACK is called after successful refresh."
   (ollama-status-refresh))
 
 (defun ollama-sort-models ()
-  "Sort models by current column."
+  "Sort models by current column using tabulated-list-mode's built-in sorting."
   (interactive)
-  (let* ((column (or (and (fboundp 'tabulated-list--get-sort-column)
-                          (tabulated-list--get-sort-column))
-                     (car tabulated-list-sort-key)))
-         (sort-fn (aref (tabulated-list-format) column 2)))
-    (if sort-fn
-        (progn
-          (setq tabulated-list-entries
-                (sort tabulated-list-entries
-                      (lambda (a b)
-                        (funcall sort-fn (car a) (car b)))))
-          (tabulated-list-print t))
-      (message "This column is not sortable"))))
+  (call-interactively 'tabulated-list-sort))
 
 (defun ollama-status--get-model-at-point ()
   "Get the model at point."
