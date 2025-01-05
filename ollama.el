@@ -6,7 +6,7 @@
 ;; Version: 0.1
 ;; Package-Requires: ((emacs "27.1") (request "0.3.0") (json "1.8"))
 ;; Keywords: ollama, ai, models
-;; URL: https://github.com/nailuoGG/ollama
+;; URL: https://github.com/nailuoGG/ollama.el
 
 ;;; Commentary:
 ;; This package provides an interface to manage Ollama models from Emacs.
@@ -95,6 +95,23 @@
   (time-less-p (date-to-time (alist-get 'modified_at (car b)))
                (date-to-time (alist-get 'modified_at (car a)))))
 
+(defun ollama--get-local-models ()
+  "Get list of locally installed Ollama models."
+  (let ((models nil)
+        (done nil))
+    (ollama--api-request "/api/tags"
+                         "GET"
+                         nil
+                         (lambda (data)
+                           (setq models (mapcar (lambda (model)
+                                                  (alist-get 'name model))
+                                                (cdr (assoc 'models data))))
+                           (setq done t)))
+    ;; Wait for the async request to complete
+    (while (not done)
+      (sit-for 0.1))
+    models))
+
 (defun ollama--prepare-model-entry (model)
   "Prepare MODEL data for tabulated list."
   (let* ((details (alist-get 'details model))
@@ -157,8 +174,10 @@
 
 ;;;###autoload
 (defun ollama-delete-model (model-name)
-  "Delete MODEL-NAME from Ollama."
-  (interactive "sModel name: ")
+  "Delete MODEL-NAME from Ollama.
+If called interactively, prompt for model name with completion."
+  (interactive
+   (list (ollama-select-model)))
   (ollama--api-request "/api/delete"
                        "DELETE"
                        `((name . ,model-name))
@@ -166,9 +185,18 @@
                          (message "Deleted model: %s" model-name))))
 
 ;;;###autoload
+(defun ollama-select-model ()
+  "Select an Ollama model from local models using completing-read."
+  (interactive)
+  (let ((models (ollama--get-local-models)))
+    (completing-read "Select model: " models)))
+
+;;;###autoload
 (defun ollama-show-model (model-name)
-  "Show information about MODEL-NAME."
-  (interactive "sModel name: ")
+  "Show information about MODEL-NAME.
+If called interactively, prompt for model name with completion."
+  (interactive
+   (list (ollama-select-model)))
   (ollama--api-request "/api/show"
                        "POST"
                        `((model . ,model-name))
@@ -180,8 +208,11 @@
 
 ;;;###autoload
 (defun ollama-copy-model (source destination)
-  "Copy SOURCE model to DESTINATION."
-  (interactive "sSource model: \nsDestination model: ")
+  "Copy SOURCE model to DESTINATION.
+If called interactively, prompt for source and destination model names with completion."
+  (interactive
+   (list (ollama-select-model)
+         (read-string "Destination model name: ")))
   (ollama--api-request "/api/copy"
                        "POST"
                        `((source . ,source)
