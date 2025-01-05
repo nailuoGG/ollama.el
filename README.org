@@ -51,6 +51,13 @@ doom sync
 | Variable            | Default Value               | Description                          |
 |---------------------|-----------------------------|--------------------------------------|
 | ollama-api-url      | "http://localhost:11434"    | Base URL for Ollama API              |
+* Development
+
+ -  ollama-api.el: Low-level API communication
+ -  ollama.el: Core model management commands
+ -  ollama-status.el: Status view and UI
+ -  ollama-transient.el: Quick access to common commands
+ -  ollama-utils.el: Shared utility functions
 
 * License
 

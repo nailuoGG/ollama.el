@@ -22,10 +22,6 @@
   ["Manage Models"
    ("l" "List models" ollama-list-models)
    ("p" "Pull model" ollama-pull-model)
-   ("d" "Delete model" ollama-delete-model)
-   ("s" "Show model info" ollama-show-model)
-   ("c" "Copy model" ollama-copy-model)]
-  ["Actions"
    ("q" "Quit" transient-quit-one)])
 
 ;;;###autoload

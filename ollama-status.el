@@ -14,7 +14,7 @@
 ;;; Code:
 
 (require 'ollama-api)
-(require 'ollama)
+(require 'ollama-utils)
 (require 'cl-lib)
 
 (defgroup ollama-status nil
@@ -75,7 +75,7 @@ Optional CALLBACK is called after successful refresh."
                        "GET"
                        nil
                        (lambda (data)
-                         (let ((models (alist-get 'models data)))
+                         (let ((models (cdr (assoc 'models data))))
                            (setq ollama-status--models models)
                            (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode models)
                            (message "Models refreshed successfully")
@@ -114,19 +114,6 @@ Optional CALLBACK is called after successful refresh."
                       (lambda ()
                         (message "Model %s deleted successfully" model-name))))))))
 
-(defun ollama-status-show-menu ()
-  "Show context menu for the model at point."
-  (interactive)
-  (let ((model-name (ollama-status--get-model-at-point)))
-    (when model-name
-      (popup-menu
-       `("Actions"
-         ["Show Info" ollama-show-model-info]
-         ["Pull Model" ollama-pull-model]
-         ["Delete Model" ollama-delete-model-at-point]
-         ["Copy Model" ollama-copy-model]
-         "--"
-         ["Refresh" ollama-status-refresh])))))
 
 (defun ollama-show-model-info ()
   "Show detailed information about the model at point."

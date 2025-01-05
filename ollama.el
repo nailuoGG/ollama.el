@@ -14,55 +14,11 @@
 ;;; Code:
 
 (require 'ollama-api)
-(require 'ollama-status)
+(require 'ollama-utils)
 
 (defgroup ollama nil
   "Ollama model management."
   :group 'tools)
-
-(defun ollama--format-size (size)
-  "Format SIZE in human readable format."
-  (cond
-   ((> size 1000000000) (format "%.1f GB" (/ size 1000000000.0)))
-   ((> size 1000000) (format "%.1f MB" (/ size 1000000.0)))
-   ((> size 1000) (format "%.1f KB" (/ size 1000.0)))
-   (t (format "%d B" size))))
-
-(defun ollama--format-date (date-str)
-  "Format DATE-STR to readable format."
-  (format-time-string "%Y-%m-%d %H:%M"
-                      (date-to-time date-str)))
-
-(defun ollama--sort-size (a b)
-  "Compare model sizes for sorting."
-  (< (alist-get 'size (car a))
-     (alist-get 'size (car b))))
-
-(defun ollama--sort-modified (a b)
-  "Compare model modified dates for sorting."
-  (time-less-p (date-to-time (alist-get 'modified_at (car b)))
-               (date-to-time (alist-get 'modified_at (car a)))))
-
-(defun ollama--prepare-model-entry (model)
-  "Prepare MODEL data for tabulated list."
-  (let* ((details (alist-get 'details model))
-         (name (alist-get 'name model))
-         (size (ollama--format-size (alist-get 'size model)))
-         (modified (ollama--format-date (alist-get 'modified_at model)))
-         (format (alist-get 'format details))
-         (params (alist-get 'parameter_size details)))
-    (list model (vector name size modified format params))))
-
-(defun ollama--setup-model-buffer (buffer-name mode models)
-  "Setup a model buffer with BUFFER-NAME using MODE and MODELS."
-  (with-current-buffer (get-buffer-create buffer-name)
-    (funcall mode)
-    (setq tabulated-list-entries
-          (mapcar #'ollama--prepare-model-entry models))
-    (tabulated-list-init-header)
-    (tabulated-list-print t)
-    (pop-to-buffer (current-buffer))))
-
 
 ;;;###autoload
 (defun ollama-pull-model (model-name)
@@ -90,7 +46,17 @@ If called interactively, prompt for model name with completion."
 (defun ollama-select-model ()
   "Select an Ollama model from local models using completing-read."
   (interactive)
-  (let ((models (ollama--get-local-models)))
+  (let ((models nil)
+        (done nil))
+    (ollama--get-local-models
+     (lambda (model-data)
+       (setq models (mapcar (lambda (model)
+                              (alist-get 'name model))
+                            model-data))
+       (setq done t)))
+    ;; Wait for the async request to complete
+    (while (not done)
+      (sit-for 0.1))
     (completing-read "Select model: " models)))
 
 ;;;###autoload

@@ -43,22 +43,18 @@ Optional ARGS may contain :error keyword for error handling."
                     (funcall error-callback error-thrown)
                   (message "Ollama error: %s" error-thrown)))))))
 
-(defun ollama--get-local-models ()
-  "Get list of locally installed Ollama models."
-  (let ((models nil)
-        (done nil))
-    (ollama--api-request "/api/tags"
-                         "GET"
-                         nil
-                         (lambda (data)
-                           (setq models (mapcar (lambda (model)
-                                                  (alist-get 'name model))
-                                                (cdr (assoc 'models data))))
-                           (setq done t)))
-    ;; Wait for the async request to complete
-    (while (not done)
-      (sit-for 0.1))
-    models))
+(defun ollama--get-local-models (&optional callback)
+  "Get list of locally installed Ollama models.
+If CALLBACK is provided, call it with the models data.
+Returns the models list if called synchronously."
+  (ollama--api-request "/api/tags"
+                       "GET"
+                       nil
+                       (lambda (data)
+                         (let ((models (cdr (assoc 'models data))))
+                           (if callback
+                               (funcall callback models)
+                             models)))))
 
 (provide 'ollama-api)
 ;;; ollama-api.el ends here
