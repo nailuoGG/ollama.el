@@ -1,0 +1,52 @@
+#+title: ollama.el - Manage Ollama Models from Emacs
+
+* Summary
+
+ollama.el provides an Emacs interface to manage Ollama models, allowing you to list, pull, delete, copy, and inspect models directly from Emacs.
+
+* Installation
+
+For Doom Emacs users, add this to your =config.el=:
+
+#+begin_src elisp
+;; In $DOOMDIR/packages.el
+(package! ollama
+  :recipe (:host github :repo "nailuoGG/ollama.el"))
+#+end_src
+
+Then run:
+```bash
+doom sync
+```
+
+* Available Commands
+
+| Command                  | Description                                      |
+|--------------------------|--------------------------------------------------|
+| ollama-list-models       | List all available models in a tabulated view    |
+| ollama-pull-model        | Pull a new model from Ollama                     |
+| ollama-delete-model      | Delete a model (with completion)                 |
+| ollama-show-model        | Show detailed information about a model          |
+| ollama-copy-model        | Copy a model to a new name                       |
+| ollama-select-model      | Select a model with completion                   |
+
+* Customization Options
+
+| Variable            | Default Value               | Description                          |
+|---------------------|-----------------------------|--------------------------------------|
+| ollama-api-url      | "http://localhost:11434"    | Base URL for Ollama API              |
+
+* License
+
+Copyright (C) 2025 jiale.liu
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the MIT License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+MIT License for more details.
+
+You should have received a copy of the MIT License
+along with this program. If not, see <https://opensource.org/licenses/MIT>.
