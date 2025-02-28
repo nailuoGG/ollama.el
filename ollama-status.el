@@ -9,13 +9,23 @@
 ;; URL: https://github.com/nailuoGG/ollama.el
 
 ;;; Commentary:
-;; This file contains the status mode and related functions for Ollama.
+;; Model status dashboard implementation. Provides:
+;; - Interactive model management interface
+;; - Real-time model list refresh
+;; - Sortable tabulated view with model details
+;; See also: `ollama-api' for data fetching, `ollama' for core operations
 
 ;;; Code:
 
 (require 'ollama-api)
 (require 'ollama-utils)
 (require 'cl-lib)
+
+;; Forward declarations to avoid circular dependencies
+(declare-function ollama-pull-model "ollama")
+(declare-function ollama-delete-model "ollama")
+(declare-function ollama-show-model "ollama")
+(declare-function ollama-copy-model "ollama")
 
 (defgroup ollama-status nil
   "Ollama status view."
@@ -68,21 +78,30 @@
   "List of models in the current status view.")
 
 (defun ollama-status-refresh (&optional callback)
-  "Refresh the Ollama status buffer.
+  "Refresh the Ollama status buffer with latest model data.
 Optional CALLBACK is called after successful refresh."
   (interactive)
+  (message "Refreshing Ollama models...")
   (ollama--api-request "/api/tags"
                        "GET"
                        nil
                        (lambda (data)
-                         (let ((models (cdr (assoc 'models data))))
-                           (setq ollama-status--models models)
-                           (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode models)
-                           (message "Models refreshed successfully")
-                           (when callback
-                             (funcall callback))))
+                         (condition-case err
+                             (let ((models (or (cdr (assoc 'models data)) '())))
+                               (setq ollama-status--models models)
+                               (ollama--setup-model-buffer ollama-status-buffer-name 'ollama-status-mode models)
+                               (message "Ollama models refreshed successfully (%d models)" (length models))
+                               (when callback
+                                 (funcall callback)))
+                           (error
+                            (message "Error processing model data: %s" (error-message-string err)))))
                        :error (lambda (err)
-                                (message "Failed to refresh models: %s" err))))
+                                (message "Failed to refresh Ollama models: %s" err)
+                                (with-current-buffer (get-buffer-create ollama-status-buffer-name)
+                                  (let ((inhibit-read-only t))
+                                    (erase-buffer)
+                                    (insert (format "Error: %s\n\n" err))
+                                    (insert "Press 'u' to retry"))))))
 
 ;;;###autoload
 (defun ollama-list-models ()
@@ -102,34 +121,63 @@ Optional CALLBACK is called after successful refresh."
       (aref entry 0))))
 
 (defun ollama-delete-model-at-point ()
-  "Delete the model at point."
+  "Delete the model at point in the Ollama status buffer."
   (interactive)
   (let ((model-name (ollama-status--get-model-at-point)))
-    (when (and model-name (yes-or-no-p (format "Delete model %s? " model-name)))
-      (ollama-delete-model model-name)
-      ;; Wait a moment before refresh to ensure deletion completes
-      (run-at-time 1 nil
-                   (lambda ()
-                     (ollama-status-refresh
-                      (lambda ()
-                        (message "Model %s deleted successfully" model-name))))))))
+    (if (not model-name)
+        (user-error "No model at point. Please position cursor on a model first")
+      (when (yes-or-no-p (format "Delete model %s? " model-name))
+        (message "Deleting model %s..." model-name)
+        (condition-case err
+            (progn
+              (require 'ollama)
+              ;; Use a callback to handle the asynchronous nature of the delete operation
+              (ollama-delete-model model-name)
+              ;; Wait a moment before refresh to ensure deletion completes
+              (run-at-time 1.5 nil
+                           (lambda ()
+                             (ollama-status-refresh
+                              (lambda ()
+                                (message "Model %s deleted successfully" model-name))))))
+          (user-error
+           (message "User error deleting model: %s" (error-message-string err)))
+          (error
+           (message "Error deleting model: %s" (error-message-string err))))))))
 
 
 (defun ollama-show-model-info ()
   "Show detailed information about the model at point."
   (interactive)
   (let ((model-name (ollama-status--get-model-at-point)))
-    (when model-name
-      (ollama-show-model model-name)
-      (pop-to-buffer "*Ollama Model Info*"))))
+    (if (not model-name)
+        (user-error "No model at point. Please position cursor on a model first")
+      (message "Fetching info for model %s..." model-name)
+      (condition-case err
+          (progn
+            (require 'ollama)
+            ;; Use a callback approach to handle the asynchronous nature
+            (ollama-show-model model-name)
+            ;; The buffer will be displayed by ollama-show-model
+            )
+        (user-error
+         (message "User error fetching model info: %s" (error-message-string err)))
+        (error
+         (message "Error fetching model info: %s" (error-message-string err)))))))
 
 ;;;###autoload
 (defun ollama-status ()
-  "Show Ollama status in a dedicated buffer."
+  "Show Ollama status in a dedicated buffer.
+Displays a list of all available models with their details."
   (interactive)
-  (if (get-buffer ollama-status-buffer-name)
-      (pop-to-buffer ollama-status-buffer-name)
-    (ollama-status-refresh)))
+  (condition-case err
+      (if (get-buffer ollama-status-buffer-name)
+          (progn
+            (pop-to-buffer ollama-status-buffer-name)
+            (when (y-or-n-p "Refresh model list? ")
+              (ollama-status-refresh)))
+        (ollama-status-refresh))
+    (error
+     (message "Error displaying Ollama status: %s" (error-message-string err)))))
 
 (provide 'ollama-status)
 ;;; ollama-status.el ends here
