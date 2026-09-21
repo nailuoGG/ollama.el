@@ -4,7 +4,7 @@
 
 ;; Author: jiale.liu <im@liujiale.me>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (ollama-api "0.1"))
+;; Package-Requires: ((emacs "27.1") (request "0.3.0"))
 ;; Keywords: ollama, ai, models
 ;; URL: https://github.com/nailuoGG/ollama.el
 
